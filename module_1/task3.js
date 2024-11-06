@@ -12,3 +12,4 @@ const sum = num1int + num2int + num3int;
 const product = num1int * num2int * num3int;
 const average = sum / 3;
 console.log(sum, product, average);
+document.getElementById("math").innerHTML = `The sum is ${sum}, product is ${product} and average is ${average}`;
