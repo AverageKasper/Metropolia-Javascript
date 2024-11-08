@@ -1,8 +1,8 @@
 'use strict';
 
-let doggy_list = []
+let doggy_list = [];
 for (let i = 0; i < 6; i++) {
-    doggy_list.push(prompt(`Enter the name of doggy ${i + 1}`));
+    doggy_list.push(prompt(`Enter the name of doggy ${i + 1}.`));
 }
 
 doggy_list.sort().reverse();
