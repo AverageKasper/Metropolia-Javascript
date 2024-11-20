@@ -1,23 +1,21 @@
-/* https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql*/
-
 'use strict';
 
 
 
-var map = L.map('map').setView([60.224291, 24.75744], 13);
+let map = L.map('map').setView([60.224291, 24.75744], 13);
 const routing_form = document.getElementById('routing');
 const api_key = '1899bb5e01c4446c8933dd0f732f06c5'
 const time_para = document.getElementById('time');
 
 
-var start;
-var lines;
+let start;
+let lines;
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
 
-var goal = L.marker([60.22414686845499, 24.75844592816039]).addTo(map);
+let goal = L.marker([60.22414686845499, 24.75844592816039]).addTo(map);
 goal.bindPopup('<b>Metropolia Karamalmi</b>').openPopup();
 
 // Function to decode polyline
@@ -58,6 +56,7 @@ function decodePolyline(encoded) {
 // Event listener for the form, which is used to submit the location
 routing_form.addEventListener('submit', async (evt) => {
     evt.preventDefault();
+    time_para.innerText = 'Loading...';
     if (start !== undefined) {
         map.removeLayer(start);
     }
@@ -73,16 +72,16 @@ routing_form.addEventListener('submit', async (evt) => {
     let hours = current_time.getHours();
     let minutes = current_time.getMinutes();
     let seconds = current_time.getSeconds();
-    console.log(hours, minutes, seconds);
     const address = document.getElementById('location').value;
-    console.log(address);
     const openstreet = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${address}`);
     const address_json = await openstreet.json();
     const latitude = address_json[0].lat;
     const longitude = address_json[0].lon;
     start = L.marker([latitude, longitude]).addTo(map);
-    start.bindPopup('<b>Selected location location</b>').openPopup();
+    start.bindPopup('<b>Selected location</b>').openPopup();
     map.addLayer(start);
+
+    // Query for the route
     const query = `
     {
       plan(
@@ -121,7 +120,12 @@ routing_form.addEventListener('submit', async (evt) => {
     });
 
     const google_encoded = await response.json();
+    if (google_encoded.data.plan.itineraries.length === 0) {
+        time_para.innerText = 'No routes found';    
+        return;
+    }
     const google_legs = google_encoded.data.plan.itineraries[0].legs;
+    
     console.log(google_legs);
     for (let i = 0; i < google_legs.length; i++) {
         let color = '';
@@ -140,6 +144,8 @@ routing_form.addEventListener('submit', async (evt) => {
         lines = L.polyline(route_points, { color: color });
         lines.addTo(map);
     }
+
+    // Time calculation
     const start_time = google_legs[0].startTime;
     const start_time_format = new Date(start_time);
     const start_time_hours = start_time_format.getHours();
@@ -148,6 +154,14 @@ routing_form.addEventListener('submit', async (evt) => {
     const end_time_format = new Date(end_time);
     const end_time_hours = end_time_format.getHours();
     const end_time_minutes = end_time_format.getMinutes();
-    time_para.innerHTML = `Start time: ${start_time_hours}:${start_time_minutes} <br> End time: ${end_time_hours}:${end_time_minutes}`;
+    const time_difference = end_time_format - start_time_format;
+    const dif_hours = Math.floor(time_difference / 1000 / 60 / 60);
+    const dif_minutes = Math.floor(time_difference / 1000 / 60) - (dif_hours * 60);
+    // Displaying the time
+    if (dif_hours > 0) {
+        time_para.innerHTML = `Start time: ${start_time_hours}:${start_time_minutes} <br> End time: ${end_time_hours}:${end_time_minutes} <br> Duration: ${dif_hours} hours and ${dif_minutes} minutes`;
+    } else {
+    time_para.innerHTML = `Start time: ${start_time_hours}:${start_time_minutes} <br> End time: ${end_time_hours}:${end_time_minutes} <br> Duration: ${dif_minutes} minutes`;
+    }
 });
 
